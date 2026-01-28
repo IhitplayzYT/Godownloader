@@ -21,9 +21,8 @@ func get_fname(resp *http.Response, raw string) string {
 			}
 		}
 	}
-
 	u, err := url.Parse(raw)
-	if err != nil {
+	if err == nil {
 		name := path.Base(u.Path)
 		if name != "/" && name != "." {
 			return name
@@ -39,7 +38,6 @@ func download(url string, dwnld_path string) error {
 		return err
 	}
 	defer res.Body.Close()
-	fmt.Println(url, " + ", dwnld_path)
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("Bad Status Code %d", res.StatusCode)
 	}
@@ -49,18 +47,15 @@ func download(url string, dwnld_path string) error {
 		return errors.New("Unable to parse fname")
 	}
 
-	fmt.Println("x")
 	ftype := res.Header.Get("Content-Type")
 	if ftype == "" {
 		ftype = "application/octet-stream"
 	}
 
-	fmt.Println("x")
 	fpath := dwnld_path
 	if !strings.HasSuffix(fpath, "/") {
 		fpath += "/"
 	}
-	fmt.Println("x")
 	fpath += fname
 	out, err := os.Create(fpath)
 	if err != nil {

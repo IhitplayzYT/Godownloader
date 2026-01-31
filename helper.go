@@ -9,15 +9,18 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
 func get_fname(resp *http.Response, raw string) string {
 	if cd := resp.Header.Get("Content-Disposition"); cd != "" {
 		_, params, err := mime.ParseMediaType(cd)
-		if err != nil {
-			if name, ok := params["filename"]; ok {
-				return name
+		if err == nil {
+			if name, ok := params["filename*"]; ok {
+				if decoded, err := url.QueryUnescape(strings.TrimPrefix(name, "UTF-8''")); err == nil {
+					return decoded
+				}
 			}
 		}
 	}
@@ -46,24 +49,22 @@ func download(url string, dwnld_path string) error {
 	if fname == "" {
 		return errors.New("Unable to parse fname")
 	}
-
-	ftype := res.Header.Get("Content-Type")
-	if ftype == "" {
-		ftype = "application/octet-stream"
-	}
-
 	fpath := dwnld_path
-	if !strings.HasSuffix(fpath, "/") {
-		fpath += "/"
+	if err = os.MkdirAll(fpath, 0755); err != nil {
+		return fmt.Errorf("Failed to create download directory: %w", err)
 	}
-	fpath += fname
+
+	fpath = filepath.Join(fpath, fname)
+	fmt.Println(fpath)
 	out, err := os.Create(fpath)
 	if err != nil {
 		return errors.New("Failed to create file" + fpath)
 	}
 	defer out.Close()
-
 	_, err = io.Copy(out, res.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return err
 }
 

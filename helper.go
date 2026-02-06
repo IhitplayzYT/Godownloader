@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -35,7 +38,36 @@ func get_fname(resp *http.Response, raw string) string {
 	return ""
 }
 
+func downloadDataURL(url string, dwnld_path string) error {
+	parts := strings.SplitN(url, ",", 2)
+	if len(parts) != 2 {
+		return errors.New("Unsupported data field")
+	}
+	metadata, img := parts[0], parts[1]
+	ext := ".bin"
+	if strings.Contains(metadata, "image/png") {
+		ext = ".png"
+	} else if strings.Contains(metadata, "image/jpeg") {
+		ext = ".jpg"
+	} else if strings.Contains(metadata, "image/svg+xml") {
+		ext = ".svg"
+	}
+	decode, err := base64.StdEncoding.DecodeString(img)
+	if err != nil {
+		return err
+	}
+	os.MkdirAll(dwnld_path, 0755)
+	hash := sha256.Sum256([]byte(img))
+	hashStr := hex.EncodeToString(hash[:])
+	fname := fmt.Sprintf("%s%s", hashStr, ext)
+	fpath := filepath.Join(dwnld_path, fname)
+	return os.WriteFile(fpath, decode, 0755)
+}
+
 func download(url string, dwnld_path string) error {
+	if strings.HasPrefix(url, "data:") {
+		return downloadDataURL(url, dwnld_path)
+	}
 	res, err := http.Get(url)
 	if err != nil {
 		return err
@@ -50,6 +82,7 @@ func download(url string, dwnld_path string) error {
 		return errors.New("Unable to parse fname")
 	}
 	fpath := dwnld_path
+
 	if err = os.MkdirAll(fpath, 0755); err != nil {
 		return fmt.Errorf("Failed to create download directory: %w", err)
 	}

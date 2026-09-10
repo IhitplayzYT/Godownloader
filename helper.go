@@ -56,12 +56,14 @@ func downloadDataURL(url string, dwnld_path string) error {
 	if err != nil {
 		return err
 	}
-	os.MkdirAll(dwnld_path, 0755)
+	if err := os.MkdirAll(dwnld_path, 0755); err != nil {
+		return fmt.Errorf("failed to create download directory: %w", err)
+	}
 	hash := sha256.Sum256([]byte(img))
 	hashStr := hex.EncodeToString(hash[:])
 	fname := fmt.Sprintf("%s%s", hashStr, ext)
 	fpath := filepath.Join(dwnld_path, fname)
-	return os.WriteFile(fpath, decode, 0755)
+	return os.WriteFile(fpath, decode, 0644)
 }
 
 func download(url string, dwnld_path string) error {
@@ -91,14 +93,14 @@ func download(url string, dwnld_path string) error {
 	fmt.Println(fpath)
 	out, err := os.Create(fpath)
 	if err != nil {
-		return errors.New("Failed to create file" + fpath)
+		return fmt.Errorf("failed to create file %s", fpath)
 	}
 	defer out.Close()
 	_, err = io.Copy(out, res.Body)
 	if err != nil {
-		fmt.Println(err)
+		return fmt.Errorf("failed to write file: %w", err)
 	}
-	return err
+	return nil
 }
 
 func parse_args(args []string) map[string]string {

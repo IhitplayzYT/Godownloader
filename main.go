@@ -16,7 +16,7 @@ func run() int {
 	for url, path := range url_path_map {
 		err := download(url, path)
 		if err != nil {
-			fmt.Println("Error Occured", err)
+			fmt.Println("Error Occurred", err)
 			return 1
 		}
 	}
